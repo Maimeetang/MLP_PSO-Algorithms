@@ -1,10 +1,5 @@
 import numbers
 
-def list_comprehension(l):
-    return [x for pair in l for lst in pair for x in lst]
-
-import numbers
-
 def _elemwise(x, y, op):
     # ตัวเลข
     if isinstance(x, numbers.Number) and isinstance(y, numbers.Number):

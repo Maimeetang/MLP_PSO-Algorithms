@@ -1,7 +1,7 @@
 import copy
 import math
 import random
-from util import zeros_like, minus_pairs, add_pairs, scale, list_comprehension
+from util import zeros_like, minus_pairs, add_pairs, scale
 
 random.seed(1)
 
@@ -79,7 +79,7 @@ class mlp_pso:
                 for i in range(node_in):
                     node_sum += particle[layer][i][o] * output[i]
                 node_sum += bias[layer][o]
-                node_sum = sigmoid(node_sum)
+                node_sum = tanh(node_sum)
                 new_output.append(node_sum)
             output = new_output
             layer += 1
@@ -91,7 +91,7 @@ class mlp_pso:
         mae = (1/len(output)) * sum(abs(t-o) for o,t in zip(output, target))
         return mae
     
-    def l_best_algorithm(self, input, target, c1, c2, inertia_weight, t_max):
+    def l_best_algorithm(self, sample_list, c1, c2, inertia_weight, t_max):
         
         t = 0
 
@@ -108,7 +108,11 @@ class mlp_pso:
             # Evaluate the performance F of each particle
             swarm_fitness = []
             for (particle, bias) in self.swarm:
-                swarm_fitness.append(self.fitness_func(input,target,particle,bias))
+                sum_mae = 0
+                for sample in sample_list:
+                    input, target = sample
+                    sum_mae += self.fitness_func(input,target,particle,bias)
+                swarm_fitness.append(sum_mae/len(sample_list))
 
             # Compare the performance of each individual to its best performance
             for i in range(len(swarm_fitness)):
@@ -175,4 +179,10 @@ class mlp_pso:
             list_v = list_v_new
             self.swarm = swarm_new
                 
+            print("ep", t+1)
+
             t += 1
+
+        g_idx = min(range(self.swarm_size), key=lambda i: p_best[i])
+        self.g_best_fitness = p_best[g_idx]
+        self.g_best_particle = copy.deepcopy(x_p_best[g_idx])
