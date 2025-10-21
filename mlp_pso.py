@@ -178,8 +178,12 @@ class mlp_pso:
 
             list_v = list_v_new
             self.swarm = swarm_new
+
+            if t+1 == 1:
+                print("ep", t+1)
                 
-            print("ep", t+1)
+            if (t+1) % 10 == 0:
+                print("ep", t+1)
 
             t += 1
 

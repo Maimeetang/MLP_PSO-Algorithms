@@ -27,18 +27,25 @@ class normalizer:
             self.input_std_list.append(std)
             input_norm_list_t.append([(x - mean) / std for x in input_list_t[i]])
 
-        self.output_mean_list = []
-        self.output_std_list = []
+        self.output_min_list = []
+        self.output_max_list = []
         output_norm_list_t = []
 
         for i in range(len(output_list_t)):
-            mean = sum(output_list_t[i]) / len(output_list_t[i])
-            variance = sum((x - mean) ** 2 for x in output_list_t[i]) / len(output_list_t[i])
-            std = variance ** 0.5
+            x_min = min(output_list_t[i]) 
+            x_max = max(output_list_t[i]) 
+            
+            self.output_min_list.append(x_min)
+            self.output_max_list.append(x_max)
 
-            self.output_mean_list.append(mean)
-            self.output_std_list.append(std)
-            output_norm_list_t.append([(x - mean) / std for x in output_list_t[i]])
+            # Normalize ข้อมูลในแต่ละลิสต์ให้อยู่ระหว่าง -1 ถึง 1
+            normalized = [
+                2 * (x - x_min) / (x_max - x_min) - 1
+                if x_max != x_min else 0  # ป้องกันหารศูนย์
+                for x in output_list_t[i]
+            ]
+
+            output_norm_list_t.append(normalized)
 
         input_norm_list = transpose(input_norm_list_t)
         output_norm_list = transpose(output_norm_list_t)
@@ -64,14 +71,23 @@ class normalizer:
         return norm_input
     
     def denormalize_output(self, norm_output):
-        """แปลงค่าผลลัพธ์ normalized กลับเป็นค่าจริง"""
-        if not hasattr(self, "output_mean_list") or not hasattr(self, "output_std_list"):
-            raise ValueError("ต้องเรียก normalize_sample ก่อน เพื่อคำนวณ mean/std")
+        """
+        แปลงค่าที่ normalize แล้ว (ช่วง -1 ถึง 1) กลับเป็นค่าจริง
+        norm_output: list ชั้นเดียว เช่น [0.2, -0.5, 1.0]
+        """
+        if not hasattr(self, "output_min_list") or not hasattr(self, "output_max_list"):
+            raise ValueError("ต้องเรียก normalize_sample ก่อน เพื่อคำนวณ min/max")
 
-        if len(norm_output) != len(self.output_mean_list):
-            raise ValueError(f"output ต้องมี {len(self.output_mean_list)} ค่า")
+        if len(norm_output) != len(self.output_min_list):
+            print(norm_output)
+            raise ValueError(f"output ต้องมี {len(self.output_min_list)} ค่า")
 
-        return [
-            z * std + mean
-            for z, mean, std in zip(norm_output, self.output_mean_list, self.output_std_list)
-        ]
+        denorm_output = []
+        for x_norm, x_min, x_max in zip(norm_output, self.output_min_list, self.output_max_list):
+            if x_max == x_min:
+                denorm_output.append(x_min)
+            else:
+                x = ((x_norm + 1) / 2) * (x_max - x_min) + x_min
+                denorm_output.append(x)
+
+        return denorm_output

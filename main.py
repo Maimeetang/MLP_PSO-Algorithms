@@ -5,19 +5,22 @@ from read_file import build_samples_from_txt
 from fold import make_kfold,flatten_one_level
 from normalizer import normalizer
 
+layers = [8]
+inertia_weight = 0.7
+
 random.seed(1)
 
 path = "AirQualityUCI.txt"
 feature_attribute = [3, 6, 8, 10, 11, 12, 13, 14]
 desire_output_attribute = 5
-horizons = (120,240)
+horizons = (240,)
 
 sample_list = build_samples_from_txt(
     path=path, 
     feature_indices=feature_attribute,
     target_index=desire_output_attribute,
     horizons = horizons,
-    drop_neg200=False
+    drop_neg200=True
 )
 
 random.shuffle(sample_list)
@@ -33,8 +36,8 @@ for i in range(len(folds)):
     new_normalizer = normalizer()
     train_sample_norm = new_normalizer.normalize_sample(train_sample)
 
-    mlp = mlp_pso(len(feature_attribute),[8],2,6)
-    mlp.l_best_algorithm(train_sample_norm,1.5,1.5,0.01,10)
+    mlp = mlp_pso(len(feature_attribute),layers,1,20)
+    mlp.l_best_algorithm(train_sample_norm,1.5,1.5,inertia_weight,100)
 
     mae_list = []
     for j in range(len(val_sample)):
@@ -51,3 +54,4 @@ for i in range(len(folds)):
 
     print("Fold ", i+1, ":")
     print(f"AVG MAE:  {sum(mae_list)/len(mae_list):.4f}")
+    print("---------------------------------------------")

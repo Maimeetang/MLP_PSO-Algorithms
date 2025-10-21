@@ -19,27 +19,20 @@ def build_samples_from_txt(
     path: str,
     feature_indices: List[int] = [3, 6, 8, 10, 11, 12, 13, 14],
     target_index: int = 5,
-    horizons: Tuple[int, int] = (120, 240),
+    horizons: Tuple[int, ...] = (120,),  # 👈 รองรับ horizon เดียวหรือหลายตัว
     drop_neg200: bool = False
 ) -> List[List[List[float]]]:
-    """
-    อ่านไฟล์และสร้าง samples ในรูปแบบ [[[features...], [y_120, y_240]], ...]
-    - feature_indices: ดัชนีคอลัมน์ของอินพุต (ตามสเกล 0..14)
-    - target_index: ดัชนีคอลัมน์ของเอาต์พุต (ค่า Benzene = attribute 5)
-    - horizons: ระยะเลื่อนล่วงหน้า (ชั่วโมง) เช่น (120, 240)
-    - drop_neg200: ถ้า True จะทิ้งตัวอย่างที่มีค่า -200 ในฟีเจอร์ ณ เวลา i หรือใน y ที่อนาคต
-    """
+
     rows: List[List[str]] = []
 
-    # 1) อ่านไฟล์และเก็บเป็นรายการของ tokens ต่อบรรทัด
+    # อ่านไฟล์
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
                 continue
-            parts = line.split()  # แยกด้วย whitespace (แท็บ/ช่องว่าง)
+            parts = line.split()
             if len(parts) < 15:
-                # ข้าม header หรือบรรทัดที่ไม่ครบ 15 คอลัมน์
                 continue
             rows.append(parts)
 
@@ -47,7 +40,7 @@ def build_samples_from_txt(
     if n == 0:
         return []
 
-    # 2) เตรียมลิสต์ฟีเจอร์และเป้าหมายตามดัชนี
+    # เตรียมฟีเจอร์และเป้าหมาย
     features_all: List[List[float]] = []
     target_all: List[float] = []
 
@@ -56,35 +49,34 @@ def build_samples_from_txt(
             feats = [_to_float(parts[i]) for i in feature_indices]
             tgt = _to_float(parts[target_index])
         except Exception:
-            # ข้ามบรรทัดที่แปลงไม่ได้
             feats, tgt = None, None
 
         features_all.append(feats) # type: ignore
         target_all.append(tgt) # type: ignore
 
-    # 3) จับคู่ i -> (i+120, i+240) แล้วสร้างรูปแบบ [[features], [y1, y2]]
-    h1, h2 = horizons
+    # --- ส่วนสร้าง samples ---
     samples: List[List[List[float]]] = []
+    max_h = max(horizons)
+    last_i = n - 1 - max_h
 
-    # วิ่งถึง n - 1 - max(h1, h2)
-    last_i = n - 1 - max(h1, h2)
     for i in range(max(0, last_i + 1)):
         feats = features_all[i]
-        y1 = target_all[i + h1]
-        y2 = target_all[i + h2]
 
-        # ข้ามถ้าแปลงไม่ได้ (None)
-        if feats is None or y1 is None or y2 is None:
+        # สร้าง output ตามจำนวน horizon ที่กำหนด
+        ys = [target_all[i + h] for h in horizons]
+
+        # ข้าม None
+        if feats is None or any(y is None for y in ys):
             continue
 
-        # ถ้าต้องการตัด -200 ออก
         if drop_neg200:
-            if any(v == -200 for v in feats) or (y1 == -200) or (y2 == -200):
+            if any(v == -200 for v in feats) or any(y == -200 for y in ys):
                 continue
 
-        samples.append([feats, [y1, y2]])
+        samples.append([feats, ys])
 
     return samples
+
 
 
 # ตัวอย่างการใช้งาน
