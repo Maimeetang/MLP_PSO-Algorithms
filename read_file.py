@@ -19,7 +19,7 @@ def build_samples_from_txt(
     path: str,
     feature_indices: List[int] = [3, 6, 8, 10, 11, 12, 13, 14],
     target_index: int = 5,
-    horizons: Tuple[int, ...] = (120,),  # 👈 รองรับ horizon เดียวหรือหลายตัว
+    horizons: Tuple[int, ...] = (120,),  # รองรับ horizon เดียวหรือหลายตัว
     drop_neg200: bool = False
 ) -> List[List[List[float]]]:
 

@@ -187,6 +187,7 @@ class mlp_pso:
 
             t += 1
 
+        # find g_best of all l_best
         g_idx = min(range(self.swarm_size), key=lambda i: p_best[i])
         self.g_best_fitness = p_best[g_idx]
         self.g_best_particle = copy.deepcopy(x_p_best[g_idx])
